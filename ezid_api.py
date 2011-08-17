@@ -43,7 +43,7 @@ class Api ():
         return self.__callApi(requestUri, method, self.__makeAnvl({name : value}))
 
     
-    def getMetadata(self, identifier):
+    def get(self, identifier):
         method = lambda: 'GET'
         requestUri = secureServer + '/id/' + identifier
         return self.__callApi(requestUri, method, None)
@@ -54,7 +54,6 @@ class Api ():
         ''' Accepts an identifier string and a profile string where the profile string 
             is one of 'erc', 'datacite', or 'dc'.
             Sets default viewing profile for the identifier as indicated.
-            Returns the record, same as modify().
         '''
         # profiles = ['erc', 'datacite', 'dc']        
         self.modify(identifier, '_profile', profile) 
@@ -74,10 +73,10 @@ class Api ():
         '''
         if clear:
             #TODO: code in clear old metadata
-            oldMeta = self.getMetadata(identifier)
+            oldMeta = self.get(identifier)
         for k in meta.keys():
             self.modify(identifier, k, meta[k])
-        return self.getMetadata(identifier)
+        return self.get(identifier)
 
 
     # Private utility functions
@@ -99,16 +98,21 @@ class Api ():
     
     
     def __parseRecord(self, ezidResponse):
+        print ezidResponse
         record = {}
         parts = ezidResponse.split('\n')
         # first item is 'success: [identifier]'
         identifier = parts[0].split(': ')[1]
         metadata = {}
-        for p in parts[1:]:
-            pair = p.split(': ')
-            if len(pair) == 2:
-                metadata[str(pair[0])] = pair[1]
-        return (identifier, metadata)
+        if len(parts) > 1:
+            for p in parts[1:]:
+                pair = p.split(': ')
+                if len(pair) == 2:
+                    metadata[str(pair[0])] = pair[1]
+            record = (identifier, metadata)
+        else:
+            record = identifier
+        return record
 
 
     def __callApi(self, requestUri, requestMethod, requestData):
@@ -119,6 +123,6 @@ class Api ():
         try:
             response = self.__parseRecord(self.opener.open(request).read())
         except urllib2.HTTPError as e:
-            response = e.read()
+            response = e.mint()
 
         return response
