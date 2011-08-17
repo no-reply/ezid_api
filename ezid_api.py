@@ -51,11 +51,30 @@ class Api ():
 
     # Public utility functions
     def changeProfile(self, identifier, profile):
-        # profiles = ['erc', 'datacite', 'dc']
-        try:
-            self.modify(identifier, '_profile', profile) 
-        except:
-            raise
+        ''' Accepts an identifier string and a profile string where the profile string 
+            is one of 'erc', 'datacite', or 'dc'.
+            Sets default viewing profile for the identifier as indicated.
+            Returns the record, same as modify().
+        '''
+        # profiles = ['erc', 'datacite', 'dc']        
+        self.modify(identifier, '_profile', profile) 
+
+
+    def recordModify(self, identifier, meta, clear=False):
+        ''' Accepts an identifier string, a dictionary object containing name value pairs
+            for metadata, and a boolean flag ('clear').
+            Writes name value pairs to the EZID record. If clear flag is true, deletes 
+            (i.e. sets to '') all names not assigned a value in the record passed in. 
+            Internal EZID metadata is ignored by the clear process so, eg. '_target' or 
+            '_coowner' must be overridden manually.
+            Returns the record, same as get().
+        '''
+        if clear:
+            # todo code in clear old metadata
+            oldMeta = self.getMetadata(identifier)
+        for k in meta.keys():
+            self.modify(identifier, k, meta[k])
+        return self.getMetadata(identifier)
 
 
     # Private utility functions
