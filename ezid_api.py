@@ -61,16 +61,19 @@ class Api ():
 
 
     def recordModify(self, identifier, meta, clear=False):
-        ''' Accepts an identifier string, a dictionary object containing name value pairs
+        ''' Accepts an identifier string, a dictionary object containing name-value pairs
             for metadata, and a boolean flag ('clear').
             Writes name value pairs to the EZID record. If clear flag is true, deletes 
             (i.e. sets to '') all names not assigned a value in the record passed in. 
             Internal EZID metadata is ignored by the clear process so, eg. '_target' or 
             '_coowner' must be overridden manually.
             Returns the record, same as get().
+            
+            Note: Because the EZID API offers no interface for full record updates, this 
+            method makes an api call--through modify()--for each name-value pair updated.
         '''
         if clear:
-            # todo code in clear old metadata
+            #TODO: code in clear old metadata
             oldMeta = self.getMetadata(identifier)
         for k in meta.keys():
             self.modify(identifier, k, meta[k])
@@ -93,6 +96,19 @@ class Api ():
         #----END BLOCK----#
 
         return anvl
+    
+    
+    def __parseRecord(self, ezidResponse):
+        record = {}
+        parts = ezidResponse.split('\n')
+        # first item is 'success: [identifier]'
+        identifier = parts[0].split(': ')[1]
+        metadata = {}
+        for p in parts[1:]:
+            pair = p.split(': ')
+            if len(pair) == 2:
+                metadata[str(pair[0])] = pair[1]
+        return (identifier, metadata)
 
 
     def __callApi(self, requestUri, requestMethod, requestData):
@@ -101,8 +117,8 @@ class Api ():
         request.add_header("Content-Type", "text/plain; charset=UTF-8")
         request.add_data(requestData)
         try:
-            response = self.opener.open(request)
+            response = self.__parseRecord(self.opener.open(request).read())
         except urllib2.HTTPError as e:
-            response = e
+            response = e.read()
 
-        return response.read()
+        return response
