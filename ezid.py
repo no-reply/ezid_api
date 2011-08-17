@@ -3,16 +3,20 @@
 import urllib2
 import re
 
+version = '0.1'
+apiVersion = 'EZID API, Version 2'
+
 server = "http://n2t.net/ezid"
 secureServer = "https://n2t.net/ezid"
 testUsername = 'apitest'
 testPassword = 'apitest'
 testShoulder = 'ark:/99999/fk4'
-testMetadata = {'_target': 'http://example.org', 'erc.who': 'apitest', 'erc.what': 'A test entry'}
+testMetadata = {'_target': 'http://example.org/opensociety', 'erc.who': 'Karl Popper', 'erc.what': 'The Open Society and Its Enemies', 'erc.when' : '1945'}
 
-class EzidApiSession ():
+class Api ():
     def __init__(self, username=testUsername, password=testPassword):
         if username == testUsername:
+            password = testPassword
             self.test = True
         else:
             self.test = False
@@ -20,7 +24,7 @@ class EzidApiSession ():
         authHandler.add_password("EZID", secureServer, username, password)
         self.opener = urllib2.build_opener(authHandler)
  
-
+    # Core api calls
     def mint(self, shoulder='ark:/99999/fk4', metadata=None):
         method = lambda: 'POST'
         requestUri = secureServer + '/shoulder/' + shoulder
@@ -45,11 +49,21 @@ class EzidApiSession ():
         return self.__callApi(requestUri, method, None)
                 
 
+    # Public utility functions
+    def changeProfile(self, identifier, profile):
+        # profiles = ['erc', 'datacite', 'dc']
+        try:
+            self.modify(identifier, '_profile', profile) 
+        except:
+            raise
+
+
+    # Private utility functions
     def __makeAnvl(self, metadata):
         """ Accepts a dictionary object containing name value pairs 
             Returns an escaped ANVL string for submission to EZID.
         """
-        if metadata == None:
+        if metadata == None and self.test == True:
             metadata = testMetadata
         #----THIS BLOCK TAKEN WHOLESALE FROM EZID API DOCUMENTATION----#
         # http://n2t.net/ezid/doc/apidoc.html#request-response-bodies
@@ -70,9 +84,6 @@ class EzidApiSession ():
         try:
             response = self.opener.open(request)
         except urllib2.HTTPError as e:
-            response = e.read()
+            response = e
 
         return response.read()
-
-
-        
