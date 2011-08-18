@@ -109,7 +109,7 @@ class Api ():
                 pair = p.split(': ')
                 if len(pair) == 2:
                     metadata[str(pair[0])] = pair[1]
-            record = (identifier, metadata)
+            record = {'identifier' : identifier, 'metadata' : metadata}
         else:
             record = identifier
         return record
