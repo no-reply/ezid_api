@@ -1,19 +1,23 @@
-#! /usr/bin/python
-
 import urllib2
 import re
+from os.path import join
 
 version = '0.1'
 apiVersion = 'EZID API, Version 2'
 
-server = "http://n2t.net/ezid"
 secureServer = "https://n2t.net/ezid"
 testUsername = 'apitest'
 testPassword = 'apitest'
-testShoulder = 'ark:/99999/fk4'
+ark = 'ark:/'
+doi = 'doi:'
+testShoulder = ark + '99999/fk4'
 testMetadata = {'_target': 'http://example.org/opensociety', 'erc.who': 'Karl Popper', 'erc.what': 'The Open Society and Its Enemies', 'erc.when' : '1945'}
 
-class Api ():
+
+class ApiSession ():
+    ''' The ApiSession optionally accepts an EZID API username and password. If none are
+    provided, the instance will provide an interface to the test account, providing a default shoulder and metadata.
+    '''
     def __init__(self, username=testUsername, password=testPassword):
         if username == testUsername:
             password = testPassword
@@ -23,29 +27,71 @@ class Api ():
         authHandler = urllib2.HTTPBasicAuthHandler()
         authHandler.add_password("EZID", secureServer, username, password)
         self.opener = urllib2.build_opener(authHandler)
+        # TODO: check login before returning?
+        # TODO: what happens if no connection?
  
     # Core api calls
-    def mint(self, shoulder='ark:/99999/fk4', metadata=None):
+    def mint(self, shoulder=testShoulder, metadata=None):
+        ''' Generates and registers a random identifier.
+        Accepts a 'shoulder' consisting of a scheme prefix, an assigning authority number, and any other prefix strings.
+        eg. 'ark:/99999/osu'
+            'doi:10.1959/osu'
+        In the case that no scheme prefix is supplied, the 'ark:/' prefix is automatically appendend.
+        eg. '99999/osu' -> 'ark:/99999/osu'
+        
+        If using the apitest account, call as mint() to automatically use the appropriate shoulder.
+        
+        Optionally, metadata can be passed to the 'metadata' prameter as a dictionary object of names & values.
+        '''
+        if shoulder == testShoulder and (not self.test):
+            raise InvalidIdentifier("Must supply a 'shoulder' identifier prefix when not using the EZID test API.")
+        elif not (shoulder.startswith(ark) or shoulder.startswith(doi)):
+            shoulder = ark + shoulder
         method = lambda: 'POST'
-        requestUri = secureServer + '/shoulder/' + shoulder
+        requestUri = join(secureServer, 'shoulder', shoulder)
         return self.__callApi(requestUri, method, self.__makeAnvl(metadata))
 
 
-    def create(self, blade, shoulder='ark:/99999/fk4', metadata=None):
+    def create(self, identifier, metadata=None):
+        '''
+        Optionally, metadata can be passed to the 'metadata' prameter as a dictionary object of names & values.
+        '''
         method = lambda: 'PUT'
-        requestUri = secureServer + '/id/' + shoulder + blade
+        if identifier[0:4] == doi or identifier[0:5] == ark:
+            requestUri = join(secureServer, 'id', identifier)
+        elif self.test:
+            requestUri = join(secureServer, 'id', testShoulder + identifier)
+        else:
+            raise InvalidScheme('ID scheme must be "' + doi + '" or "' + ark + '".')
         return self.__callApi(requestUri, method, self.__makeAnvl(metadata))
 
     
     def modify(self, identifier, name, value):
+        ''' Accepts an identifier string, a name string and a value string. Writes the name and value as metadata to the provided identifer. 
+
+        The EZID system will store any name/value pair as metadata, but certian names have specific meaning to the system. Some names fit in the metadata profiles explicitly supported by the system, others are reserved as internal data fields.
+
+        Reserved data fields control how EZID manages an identifer. These fields begin with an '_'. More here: http://n2t.net/ezid/doc/apidoc.html#internal-metadata
+
+        To write to the standard EZID metadata fields use name strings of the form [profile].[field] where [profile] is one of 'erc', 'dc', or 'datacite'.
+        Example name strings:
+          'erc.who'
+          'erc.what'
+          'erc.when'
+          'dc.creator'
+          'dc.title'
+          'datacite.creator'
+          'datacite.title'
+          'datacite.publicationyear'
+        '''
         method = lambda: 'POST'
-        requestUri = secureServer + '/id/' + identifier
+        requestUri = join(secureServer, 'id', identifier)
         return self.__callApi(requestUri, method, self.__makeAnvl({name : value}))
 
     
     def get(self, identifier):
         method = lambda: 'GET'
-        requestUri = secureServer + '/id/' + identifier
+        requestUri = join(secureServer, 'id', identifier)
         return self.__callApi(requestUri, method, None)
                 
 
@@ -57,6 +103,13 @@ class Api ():
         '''
         # profiles = ['erc', 'datacite', 'dc']        
         self.modify(identifier, '_profile', profile) 
+
+    
+    def changeTarget(self, identifier, target):
+        ''' Accepts an identifier string and a target string.
+            Changes the target url for the identifer to the string provided.
+        '''
+        self.modify(identifier, '_target', target)
 
 
     def recordModify(self, identifier, meta, clear=False):
@@ -79,6 +132,14 @@ class Api ():
         return self.get(identifier)
 
 
+    def stripIdentifier(self, identifier):
+        return identifier
+
+    
+    def stripShoulder(self, shoulder):
+        return shoulder
+
+
     # Private utility functions
     def __makeAnvl(self, metadata):
         """ Accepts a dictionary object containing name value pairs 
@@ -98,7 +159,6 @@ class Api ():
     
     
     def __parseRecord(self, ezidResponse):
-        print ezidResponse
         record = {}
         parts = ezidResponse.split('\n')
         # first item is 'success: [identifier]'
@@ -114,6 +174,10 @@ class Api ():
             record = identifier
         return record
 
+    
+    def __buildId(self, identifier):
+        pass
+
 
     def __callApi(self, requestUri, requestMethod, requestData):
         request = urllib2.Request(requestUri)
@@ -123,6 +187,9 @@ class Api ():
         try:
             response = self.__parseRecord(self.opener.open(request).read())
         except urllib2.HTTPError as e:
-            response = e.mint()
+            response = e
 
         return response
+
+class InvalidIdentifier(Exception):
+    pass
