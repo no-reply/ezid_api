@@ -1,5 +1,7 @@
 ezid.py
 
-API tools for EZID API. 
+API tools for EZID API (http://n2t.net/ezid/). 
 
-http://n2t.net/ezid/
+Start an API session with ezid_api.ApiSession(username, password). If no username and password are provided, the ezid test api account is used. 
+
+
