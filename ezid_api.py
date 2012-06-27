@@ -3,7 +3,7 @@ from datetime import datetime
 import re
 from os.path import join
 
-version = '0.1'
+version = '0.2'
 apiVersion = 'EZID API, Version 2'
 
 secureServer = "https://n2t.net/ezid"
