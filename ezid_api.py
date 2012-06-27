@@ -8,8 +8,6 @@ apiVersion = 'EZID API, Version 2'
 secureServer = "https://n2t.net/ezid"
 testUsername = 'apitest'
 testPassword = 'apitest'
-ark = 'ark:/'
-doi = 'doi:'
 schemes = {'ark': 'ark:/', 'doi': "doi:"}
 private = "reserved"
 public = "public"
@@ -110,18 +108,30 @@ class ApiSession ():
         '''
         # profiles = ['erc', 'datacite', 'dc']        
         self.modify(identifier, '_profile', profile)
+
+    def getStatus(self, identifier):
+        return self.get(identifier)['metadata']['_status']
         
     def makePublic(self, identifier):
-        self.modify(identifier, '_status', public)
+        return self.modify(identifier, '_status', public)
 
     def makeUnavailable(self, identifier):
-        self.modify(identifier, '_status', unavail)
+        return self.modify(identifier, '_status', unavail)
+
+    def getTarget(self, identifier):
+        return self.get(identifier)['metadata']['_target']
     
     def changeTarget(self, identifier, target):
+        ''' Deprecated: currently an alias for modifyTarget()
+        '''
+        self.modifyTarget(identifier, target)
+
+    def modifyTarget(self, identifier, target):
         ''' Accepts an identifier string and a target string.
             Changes the target url for the identifer to the string provided.
         '''
         self.modify(identifier, '_target', target)
+
 
 
     def recordModify(self, identifier, meta, clear=False):
