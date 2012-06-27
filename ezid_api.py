@@ -149,14 +149,6 @@ class ApiSession ():
     def setNAA(self, naa):
         self.naa = naa
 
-    def stripIdentifier(self, identifier):
-        return identifier
-
-    
-    def stripShoulder(self, shoulder):
-        return shoulder
-
-
     # Private utility functions
     def __makeAnvl(self, metadata):
         """ Accepts a dictionary object containing name value pairs 
