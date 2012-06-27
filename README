@@ -2,8 +2,10 @@ ezid.py
 
 API tools for EZID API (http://n2t.net/ezid/). 
 
-Start an API session with ezid_api.ApiSession(username, password, scheme, naa). If no username and password are provided, the ezid test api account is used. 
-testArk = ezid_api.ApiSession()
+Start an API session with ezid_api.ApiSession(username, password, scheme, naa). If no username and password are provided, the ezid test api account is used.
+
+ 
+``testArk = ezid_api.ApiSession()
 testArk.mint()
 'ark:/99999/fk4wd4h51'
 testArk.create('abc')
@@ -17,5 +19,5 @@ testDoi.create('abc')
 
 real = ezid_api.ApiSession('myacct', 'mypass', 'ark', '12345/6A')
 real.create('abc')
-'ark:/12345/6Aabc'
+'ark:/12345/6Aabc'``
 
