@@ -14,7 +14,7 @@ schemes = {'ark': 'ark:/', 'doi': "doi:"}
 private = "reserved"
 public = "public"
 unavail = "unavailable"
-testShoulder = ark + '99999/fk4'
+testShoulder = {schemes['ark'] : '99999/fk4', schemes['doi'] : '10.5072/FK2'}
 testMetadata = {'_target': 'http://example.org/opensociety', 'erc.who': 'Karl Popper', 'erc.what': 'The Open Society and Its Enemies', 'erc.when' : '1945'}
 
 
@@ -24,7 +24,7 @@ class ApiSession ():
     Also accepts a scheme (either "ark" or "doi"), and a assigning authority number.
     Defaults to test account on with scheme and prefix: ark:/99999/fk4
     '''
-    def __init__(self, username=testUsername, password=testPassword, scheme="ark", naa="99999/fk4"):
+    def __init__(self, username=testUsername, password=testPassword, scheme="ark", naa=''):
         if username == testUsername:
             password = testPassword
             self.test = True
@@ -36,6 +36,9 @@ class ApiSession ():
         # TODO: check login before returning?
         # TODO: what happens if no connection?
         self.setScheme(scheme[0:3])
+        # if we are testing, use the test shoulder for the given scheme
+        if self.test == True:
+            naa = testShoulder[self.scheme]
         self.setNAA(naa)
  
     # Core api calls
