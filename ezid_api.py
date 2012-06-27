@@ -1,4 +1,5 @@
 import urllib2
+from datetime import datetime
 import re
 from os.path import join
 
@@ -132,7 +133,15 @@ class ApiSession ():
         '''
         self.modify(identifier, '_target', target)
 
+    def getCreated(self, identifier):
+        ''' Utility method for returning a datetime object instead of the unix timestamp for date created.
+        '''
+        return datetime.fromtimestamp(float(self.get(identifier)['metadata']['_created']))
 
+    def getUpdated(self, identifier):
+        ''' Utility method for returning a datetime object instead of the unix timestamp for date modified.
+        '''
+        return datetime.fromtimestamp(float(self.get(identifier)['metadata']['_updated']))
 
     def recordModify(self, identifier, meta, clear=False):
         ''' Accepts an identifier string, a dictionary object containing name-value pairs
