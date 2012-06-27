@@ -95,7 +95,12 @@ class ApiSession ():
         method = lambda: 'GET'
         requestUri = join(secureServer, 'id', identifier)
         return self.__callApi(requestUri, method, None)
-                
+
+    def delete(self, identifier):
+        method = lambda: 'DELETE'
+        requestUri = join(secureServer, 'id', identifier)
+        return self.__callApi(requestUri, method, None)
+
 
     # Public utility functions
     def changeProfile(self, identifier, profile):
