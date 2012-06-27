@@ -10,15 +10,21 @@ testUsername = 'apitest'
 testPassword = 'apitest'
 ark = 'ark:/'
 doi = 'doi:'
+schemes = {'ark': 'ark:/', 'doi': "doi:"}
+private = "reserved"
+public = "public"
+unavail = "unavailable"
 testShoulder = ark + '99999/fk4'
 testMetadata = {'_target': 'http://example.org/opensociety', 'erc.who': 'Karl Popper', 'erc.what': 'The Open Society and Its Enemies', 'erc.when' : '1945'}
 
 
 class ApiSession ():
-    ''' The ApiSession optionally accepts an EZID API username and password. If none are
-    provided, the instance will provide an interface to the test account, providing a default shoulder and metadata.
+    ''' The ApiSession optionally accepts an EZID API username and password. 
+
+    Also accepts a scheme (either "ark" or "doi"), and a assigning authority number.
+    Defaults to test account on with scheme and prefix: ark:/99999/fk4
     '''
-    def __init__(self, username=testUsername, password=testPassword):
+    def __init__(self, username=testUsername, password=testPassword, scheme="ark", naa="99999/fk4"):
         if username == testUsername:
             password = testPassword
             self.test = True
@@ -29,40 +35,33 @@ class ApiSession ():
         self.opener = urllib2.build_opener(authHandler)
         # TODO: check login before returning?
         # TODO: what happens if no connection?
+        self.setScheme(scheme[0:3])
+        self.setNAA(naa)
  
     # Core api calls
-    def mint(self, shoulder=testShoulder, metadata=None):
-        ''' Generates and registers a random identifier.
-        Accepts a 'shoulder' consisting of a scheme prefix, an assigning authority number, and any other prefix strings.
-        eg. 'ark:/99999/osu'
-            'doi:10.1959/osu'
-        In the case that no scheme prefix is supplied, the 'ark:/' prefix is automatically appendend.
-        eg. '99999/osu' -> 'ark:/99999/osu'
-        
-        If using the apitest account, call as mint() to automatically use the appropriate shoulder.
-        
+    def mint(self, metadata={}):
+        ''' Generates and registers a random identifier using the id scheme and name assigning authority already set.
         Optionally, metadata can be passed to the 'metadata' prameter as a dictionary object of names & values.
+        Minted identifiers are always created with a status of "reserved".
         '''
-        if shoulder == testShoulder and (not self.test):
-            raise InvalidIdentifier("Must supply a 'shoulder' identifier prefix when not using the EZID test API.")
-        elif not (shoulder.startswith(ark) or shoulder.startswith(doi)):
-            shoulder = ark + shoulder
+        shoulder = self.scheme + self.naa
+        metadata['_status'] = private
         method = lambda: 'POST'
         requestUri = join(secureServer, 'shoulder', shoulder)
         return self.__callApi(requestUri, method, self.__makeAnvl(metadata))
 
 
-    def create(self, identifier, metadata=None):
+    def create(self, identifier, metadata={}):
         '''
         Optionally, metadata can be passed to the 'metadata' prameter as a dictionary object of names & values.
         '''
+        if not "_status" in metadata:
+            metadata["_status"] = private
         method = lambda: 'PUT'
-        if identifier[0:4] == doi or identifier[0:5] == ark:
-            requestUri = join(secureServer, 'id', identifier)
-        elif self.test:
-            requestUri = join(secureServer, 'id', testShoulder + identifier)
-        else:
-            raise InvalidScheme('ID scheme must be "' + doi + '" or "' + ark + '".')
+        if not identifier.startswith(schemes['doi']) and not identifier.startswith(schemes['ark']):
+            identifier = self.scheme + self.naa + identifier
+        requestUri = join(secureServer, 'id', identifier)
+
         return self.__callApi(requestUri, method, self.__makeAnvl(metadata))
 
     
@@ -102,8 +101,13 @@ class ApiSession ():
             Sets default viewing profile for the identifier as indicated.
         '''
         # profiles = ['erc', 'datacite', 'dc']        
-        self.modify(identifier, '_profile', profile) 
+        self.modify(identifier, '_profile', profile)
+        
+    def makePublic(self, identifier):
+        self.modify(identifier, '_status', public)
 
+    def makeUnavailable(self, identifier):
+        self.modify(identifier, '_status', unavail)
     
     def changeTarget(self, identifier, target):
         ''' Accepts an identifier string and a target string.
@@ -125,12 +129,17 @@ class ApiSession ():
             method makes an api call--through modify()--for each name-value pair updated.
         '''
         if clear:
-            #TODO: code in clear old metadata
+            #TODO: clear old metadata
             oldMeta = self.get(identifier)
         for k in meta.keys():
             self.modify(identifier, k, meta[k])
         return self.get(identifier)
 
+    def setScheme(self, scheme):
+        self.scheme = schemes[scheme]
+            
+    def setNAA(self, naa):
+        self.naa = naa
 
     def stripIdentifier(self, identifier):
         return identifier
@@ -187,9 +196,11 @@ class ApiSession ():
         try:
             response = self.__parseRecord(self.opener.open(request).read())
         except urllib2.HTTPError as e:
-            response = e
+            response = e.read()
 
         return response
 
 class InvalidIdentifier(Exception):
     pass
+    
+    
